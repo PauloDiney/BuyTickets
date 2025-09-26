@@ -1,0 +1,65 @@
+require('dotenv').config();
+const express =require("express");
+const http = require("http");
+const cors = require("cors");
+const amqp = require("amqplib");
+const { Server } = require("socket.io");
+
+const RABBIT_URL = process.env.RABBIT_URL;
+const EXCHANGE = process.env.EXCHANGE;
+
+(async () => {
+    const conn = await amqp.connect(RABBIT_URL);
+    const channel = await conn.createChannel();
+    await channel.assertExchange(EXCHANGE, 'topic', {durable: true});
+
+    const app = express();
+    app.use(cors());
+    app.use(express.json());
+    const server = http.createServer(app);
+    const io = new Server(server, {
+        cors: { origin: "*" }
+    });
+
+    //App React que vai publicar no tópico
+    app.post("/publicar", async (req, res) => {
+        try {
+            const {nome, numero} = req.body;
+            if (!nome || !numero) return res.status(400)
+                                            .json({error: "Dados obrigatórios!"});
+            
+            const key = "pedidos."+nome;
+            const payload = {nome, numero};
+            channel.publish(EXCHANGE, key, Buffer.from(JSON.stringify(payload)), {persistent: true});
+
+            return res.json({ok: true});
+        }catch(e){
+            return res.status(500).json({error: "Erro ao publicar"});
+        }
+    });
+
+    //Quando o Consumidor em React conectar via WebSockets
+    io.on("connection", (socket) => {
+        socket.on("subscribe", async ({nome}) => {
+            const key = "pedidos."+nome;
+            const q = await channel.assertQueue("", {
+                exclusive: true,
+                durable: false,
+                autoDelete: true
+            });
+
+            await channel.bindQueue(q.queue, EXCHANGE, key);
+
+            const consumidor = (await channel.consume(q.queue, (msg) => {
+                const conteudo = JSON.parse(msg.content.toString());
+                socket.emit("pedidos", conteudo);
+                channel.ack(msg);
+            }));
+
+        });
+        
+    });
+
+    server.listen(4000, () => console.log("Servidor rodando!"));
+
+});
