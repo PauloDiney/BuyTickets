@@ -13,6 +13,14 @@ const movieGenres = {
   4: 'Ação, Aventura, Ficção Científica'
 };
 
+// Mapeamento das imagens dos filmes
+const movieImages = {
+  1: '/img/vingadores.jpg',
+  2: '/img/maverck.jpg',
+  3: '/img/avatar.jpg',
+  4: '/img/miranha.jpg'
+};
+
 function App() {
   const [movies, setMovies] = useState([]);
   const [selectedMovie, setSelectedMovie] = useState(null);
@@ -213,7 +221,16 @@ function App() {
               {movies.map(movie => (
                 <div key={movie.id} className="movie-card">
                   <div className="movie-poster">
-                    🎬
+                    <img 
+                      src={movieImages[movie.id]} 
+                      alt={movie.title}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        borderRadius: '8px'
+                      }}
+                    />
                   </div>
                   <div className="movie-info">
                     <h3>{movie.title}</h3>
@@ -250,6 +267,19 @@ function App() {
             <h2>Finalizar Compra</h2>
             
             <div className="movie-selected">
+              <div className="selected-movie-poster">
+                <img 
+                  src={movieImages[selectedMovie.id]} 
+                  alt={selectedMovie.title}
+                  style={{
+                    width: '150px',
+                    height: '200px',
+                    objectFit: 'cover',
+                    borderRadius: '8px',
+                    marginBottom: '15px'
+                  }}
+                />
+              </div>
               <h3>{selectedMovie.title}</h3>
               <p><strong>Gênero:</strong> {movieGenres[selectedMovie.id]}</p>
               <p><strong>Preço unitário:</strong> R$ {selectedMovie.price.toFixed(2)}</p>
